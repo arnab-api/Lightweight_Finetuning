@@ -76,6 +76,7 @@ def generate_fast(
     track_interesting_words = None  # for each prompt tracks the p(token) of some interesting tokens as answer (the first generated token). 
                                     # `get_answer_tokens` must be true
 ):
+    print(prompts)
     inp_tok = tok(prompts, padding=True, return_tensors="pt").to(
         next(model.parameters()).device
     )
@@ -181,7 +182,7 @@ def generate_fast(
     txt = [
         unicodedata.normalize("NFKD", x)
         .replace("\n", " ")
-        .replace("<|endoftext|>", "")
+        # .replace("<|endoftext|>", "")
         for x in txt
     ]
 
