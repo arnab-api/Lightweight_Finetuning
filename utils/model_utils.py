@@ -57,6 +57,21 @@ def print_formatted_results(prompts, txt, ret_dict):
             print("p(interesting): ", ", ".join([f"p(\'{t['token']}\'[{t['token_id']}])={t['p']}" for t in p_interesting]))
 
         print()
+        
+
+def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
+    def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
+        if(layer != embedder):
+            return output
+        print("intervention ==> ", layer, "output shape ===> ", output.shape)
+        return output
+        prefix_size = soft_embeddings.shape[1]
+        arr = []
+        for batch in output:
+            added = torch.cat((soft_embeddings[0], batch[prefix_size:, :]))
+            arr.append(added)
+        return torch.stack(arr)
+    return insert_prompt_embeddings
 
 
 import unicodedata
@@ -73,15 +88,31 @@ def generate_fast(
     debug = False,
 
     get_answer_tokens = False,      # returns the immediate next top token and `top_k` possible candidates
-    track_interesting_words = None  # for each prompt tracks the p(token) of some interesting tokens as answer (the first generated token). 
+    track_interesting_words = None, # for each prompt tracks the p(token) of some interesting tokens as answer (the first generated token). 
                                     # `get_answer_tokens` must be true
+    prompt_tuning = None, embedder = "transformer.wte"
 ):
-    print(prompts)
-    inp_tok = tok(prompts, padding=True, return_tensors="pt").to(
+    # print(prompts)
+    tokenized = tok(prompts, padding=True, return_tensors="pt").to(
         next(model.parameters()).device
     )
-    # print(inp_tok['input_ids'].shape)
-    input_ids, attention_mask = inp_tok["input_ids"], inp_tok["attention_mask"]
+
+    intervention_function = None
+
+    if(prompt_tuning is not None):
+        prefix_size = prompt_tuning.shape[1]
+        print(prefix_size, prompt_tuning.shape)
+        # add soft tokens
+        prefix_tokens = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device) * model.config.bos_token_id
+        tokenized["input_ids"] = torch.cat((prefix_tokens, tokenized["input_ids"]), dim = 1)
+        prefix_attn = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device)
+        tokenized["attention_mask"] = torch.cat((prefix_attn, tokenized["attention_mask"]), dim = 1)
+
+        intervention_function = get_prompt_tuning_edit(prompt_tuning, embedder)
+
+
+    print(tokenized['input_ids'].shape)
+    input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
     batch_size = input_ids.size(0)
 
     # Setup storage of fast generation with attention caches.
@@ -89,6 +120,8 @@ def generate_fast(
     # stored in `past_key_values`. At each step, we are generating the
     # next token for the index at `cur_context.stop + 1`.
     past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())
+
+    print(cur_context)
 
     if get_answer_tokens == True:
         prompt_lens = [
@@ -101,13 +134,20 @@ def generate_fast(
 
     with torch.no_grad():
         while input_ids.size(1) < max_out_len:  # while not exceeding max output length
-            model_out = model(
-                input_ids=input_ids[:, cur_context],
-                attention_mask=attention_mask[:, cur_context],
-                past_key_values=past_key_values,
-                use_cache=True,
-            )
+            with nethook.TraceDict(
+                model, [embedder], edit_output= intervention_function
+            ) as traces:
+                model_out = model(
+                    input_ids=input_ids[:, cur_context],
+                    attention_mask=attention_mask[:, cur_context],
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                )
+            if(intervention_function is not None):
+                intervention_function = None
             logits, past_key_values = model_out.logits, model_out.past_key_values
+            # print(" ====> ", logits.shape)
+
             softmax_out = torch.nn.functional.softmax(logits[:, -1, :], dim=1)
 
             # Top-k sampling
@@ -186,7 +226,7 @@ def generate_fast(
         for x in txt
     ]
 
-    ret_dict = {}
+    ret_dict = {"past_key_values": past_key_values}
     if(get_answer_tokens == True):
         ret_dict['answer'] = answers
         if(track_interesting_words is not None):
