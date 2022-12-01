@@ -111,7 +111,7 @@ def generate_fast(
         intervention_function = get_prompt_tuning_edit(prompt_tuning, embedder)
 
 
-    print(tokenized['input_ids'].shape)
+    # print(tokenized['input_ids'].shape)
     input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
     batch_size = input_ids.size(0)
 
@@ -121,7 +121,7 @@ def generate_fast(
     # next token for the index at `cur_context.stop + 1`.
     past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())
 
-    print(cur_context)
+    # print(cur_context)
 
     if get_answer_tokens == True:
         prompt_lens = [
