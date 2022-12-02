@@ -63,8 +63,8 @@ def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
     def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
         if(layer != embedder):
             return output
-        print("intervention ==> ", layer, "output shape ===> ", output.shape)
-        return output
+        # print("intervention ==> ", layer, "output shape ===> ", output.shape)
+        # return output
         prefix_size = soft_embeddings.shape[1]
         arr = []
         for batch in output:
@@ -77,6 +77,7 @@ def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
 import unicodedata
 from typing import Optional, List
 import collections
+import numpy as np
 
 def generate_fast(
     model: AutoModelForCausalLM,
@@ -101,7 +102,7 @@ def generate_fast(
 
     if(prompt_tuning is not None):
         prefix_size = prompt_tuning.shape[1]
-        print(prefix_size, prompt_tuning.shape)
+        # print(prefix_size, prompt_tuning.shape)
         # add soft tokens
         prefix_tokens = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device) * model.config.bos_token_id
         tokenized["input_ids"] = torch.cat((prefix_tokens, tokenized["input_ids"]), dim = 1)
@@ -124,10 +125,12 @@ def generate_fast(
     # print(cur_context)
 
     if get_answer_tokens == True:
-        prompt_lens = [
+        prompt_lens = np.array([
             tok([p], return_tensors="pt").input_ids.shape[-1]
             for p in prompts
-        ]
+        ])
+        if(prompt_tuning != None):
+            prompt_lens += prefix_size  
         answers = [{'top_token': "<#>", 'candidates': []} for _ in range(input_ids.shape[0])]
         if(track_interesting_words is not None):
             p_interesting_words = [[] for _ in range(input_ids.shape[0])]
