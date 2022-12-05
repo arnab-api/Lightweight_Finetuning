@@ -110,6 +110,17 @@ def get_prefix_tuning_edit(prefix_embeddings):
 ############################## Prefix Tuning Edit ##############################
 
 
+############################## Adapter Tuning Edit ##############################
+def get_adapter_tuning_edit(adapter_collection):
+    def insert_adapters_into_calculation(output, layer, adapter_collection = adapter_collection):
+        if(layer not in adapter_collection):
+            return output
+        # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
+
+        return adapter_collection[layer](output)
+    return insert_adapters_into_calculation
+############################## Adapter Tuning Edit ##############################
+
 
 import unicodedata
 from typing import Optional, List
@@ -137,6 +148,7 @@ def generate_fast(
     )
 
     intervention_function = None
+    trace_modules = []
 
     if(light_weight_tuning is not None):
         if(algo in ["prompt", "prefix"]):
@@ -150,8 +162,13 @@ def generate_fast(
 
             if(algo == "prompt"):
                 intervention_function = get_prompt_tuning_edit(light_weight_tuning, embedder)
+                trace_modules = [embedder]
             else:
                 intervention_function = get_prefix_tuning_edit(light_weight_tuning)
+                trace_modules = list(light_weight_tuning.keys())
+        else:
+            intervention_function = get_adapter_tuning_edit(light_weight_tuning)
+            trace_modules = list(light_weight_tuning.keys())
 
 
     # print(tokenized['input_ids'].shape)
@@ -180,7 +197,7 @@ def generate_fast(
     with torch.no_grad():
         while input_ids.size(1) < max_out_len:  # while not exceeding max output length
             with nethook.TraceDict(
-                model, [embedder], edit_output= intervention_function
+                model, trace_modules, edit_output= intervention_function
             ) as traces:
                 model_out = model(
                     input_ids=input_ids[:, cur_context],
