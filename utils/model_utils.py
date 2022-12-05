@@ -58,7 +58,7 @@ def print_formatted_results(prompts, txt, ret_dict):
 
         print()
         
-
+############################## Prompt Tuning Edit ##############################
 def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
     def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
         if(layer != embedder):
@@ -72,6 +72,43 @@ def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
             arr.append(added)
         return torch.stack(arr)
     return insert_prompt_embeddings
+############################## Prompt Tuning Edit ##############################
+
+
+def untuple(output):
+    if(type(output) is tuple):
+        return output[0]
+    return output
+
+def get_shape(output):
+    pre = f"{type(output)} ==> "
+    if(type(output) is tuple):
+        return pre + f"{output[0].shape} -- {(output[1][0].shape, output[1][1].shape)}"
+    return pre + f"{output.shape}"
+
+############################## Prefix Tuning Edit ##############################
+def get_prefix_tuning_edit(prefix_embeddings):
+    def insert_prompt_embeddings(output, layer, prefix_embeddings = prefix_embeddings):
+        if(layer not in prefix_embeddings):
+            return output
+        # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
+        # return output
+        X = untuple(output)
+        prefix_now = prefix_embeddings[layer]
+        prefix_size = prefix_now.shape[1]
+        arr = []
+        for batch in X:
+            added = torch.cat((prefix_now[0], batch[prefix_size:, :]))
+            arr.append(added)
+        X = torch.stack(arr)
+
+        if(type(output) is not tuple):
+            return X
+        else:
+            return (X, output[1])
+    return insert_prompt_embeddings
+############################## Prefix Tuning Edit ##############################
+
 
 
 import unicodedata
@@ -91,7 +128,8 @@ def generate_fast(
     get_answer_tokens = False,      # returns the immediate next top token and `top_k` possible candidates
     track_interesting_words = None, # for each prompt tracks the p(token) of some interesting tokens as answer (the first generated token). 
                                     # `get_answer_tokens` must be true
-    prompt_tuning = None, embedder = "transformer.wte"
+    light_weight_tuning = None, algo = "prompt", # options => prompt | prefix | adapter
+    embedder = "transformer.wte"
 ):
     # print(prompts)
     tokenized = tok(prompts, padding=True, return_tensors="pt").to(
@@ -100,16 +138,20 @@ def generate_fast(
 
     intervention_function = None
 
-    if(prompt_tuning is not None):
-        prefix_size = prompt_tuning.shape[1]
-        # print(prefix_size, prompt_tuning.shape)
-        # add soft tokens
-        prefix_tokens = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device) * model.config.bos_token_id
-        tokenized["input_ids"] = torch.cat((prefix_tokens, tokenized["input_ids"]), dim = 1)
-        prefix_attn = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device)
-        tokenized["attention_mask"] = torch.cat((prefix_attn, tokenized["attention_mask"]), dim = 1)
+    if(light_weight_tuning is not None):
+        if(algo in ["prompt", "prefix"]):
+            prefix_size = light_weight_tuning.shape[1] if algo == "prompt" else light_weight_tuning[embedder].shape[1]
+            # print(prefix_size, prompt_tuning.shape)
+            # add soft tokens
+            prefix_tokens = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device) * model.config.bos_token_id
+            tokenized["input_ids"] = torch.cat((prefix_tokens, tokenized["input_ids"]), dim = 1)
+            prefix_attn = torch.ones(len(prompts), prefix_size, dtype = int).to(next(model.parameters()).device)
+            tokenized["attention_mask"] = torch.cat((prefix_attn, tokenized["attention_mask"]), dim = 1)
 
-        intervention_function = get_prompt_tuning_edit(prompt_tuning, embedder)
+            if(algo == "prompt"):
+                intervention_function = get_prompt_tuning_edit(light_weight_tuning, embedder)
+            else:
+                intervention_function = get_prefix_tuning_edit(light_weight_tuning)
 
 
     # print(tokenized['input_ids'].shape)
@@ -129,7 +171,7 @@ def generate_fast(
             tok([p], return_tensors="pt").input_ids.shape[-1]
             for p in prompts
         ])
-        if(prompt_tuning != None):
+        if((light_weight_tuning is not None) and (algo in ["prompt", "prefix"])):
             prompt_lens += prefix_size  
         answers = [{'top_token': "<#>", 'candidates': []} for _ in range(input_ids.shape[0])]
         if(track_interesting_words is not None):
