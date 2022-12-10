@@ -39,7 +39,10 @@ def get_tuned_prefixes(
 
     transformer_blocks = [f"transformer.h.{n}" for n in range(model.config.n_layer)]
     prefix_embeddings = {
-        key: get_initial_prefix(prefix_size) for key in [embedder] + transformer_blocks[:-1]
+        key: get_initial_prefix(
+            model, tokenizer, 
+            prefix_size = prefix_size
+        ) for key in [embedder] + transformer_blocks[:-1]
     }
     insert_prefix_embeddings = get_prefix_tuning_edit(prefix_embeddings)
     print(f"Initializing adapters with prefix_size = {prefix_size}")

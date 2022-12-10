@@ -86,7 +86,6 @@ def get_adapter_tuning_edit(adapter_collection): # to be used with the `nethook`
 ###################################### Prefix ######################################
 import random
 #######################################################
-
 init_words = ["sentiment", "elephant", "review"]
 #######################################################
 
