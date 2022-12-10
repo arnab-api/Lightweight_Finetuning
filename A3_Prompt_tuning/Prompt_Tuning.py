@@ -59,6 +59,7 @@ def get_tuned_soft_tokens(
 
     for epoch in range(num_epochs):
         print(f"Epoch {epoch + 1}")
+        cur_limit = limit
         for reviews, sentiments in tqdm(training_dataloader):
             tokenized_inputs = tokenizer(
                 list(reviews),
@@ -109,8 +110,8 @@ def get_tuned_soft_tokens(
             loss.backward()
             optimizer.step()
 
-            limit -= 1
-            if(limit == 0):
+            cur_limit -= 1
+            if(cur_limit == 0):
                 break
 
     ret_dict = {}

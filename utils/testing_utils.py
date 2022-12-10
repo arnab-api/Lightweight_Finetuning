@@ -4,6 +4,14 @@ from utils import model_utils
 
 from sklearn.metrics import confusion_matrix
 
+def get_confusion_matrix(target, prediction, choices = [" positive", " negative"]):
+    for i in range(len(prediction)):
+        if(prediction[i] not in choices):
+            for wrong in choices:
+                if(wrong != target[i]):
+                    prediction[i] = wrong
+    tn, fp, fn, tp = confusion_matrix(target, prediction).ravel()
+    return tn, fp, fn, tp
 
 def test(
     testing_dataloader,
@@ -58,15 +66,16 @@ def test(
     ret_dict = {}
     try:
         tn, fp, fn, tp = confusion_matrix(target, predict).ravel()
-        ret_dict['confusion_matrix'] = {
-            'tp': int(tp), 'fn': int(fn),
-            'fp': int(fp), 'tn': int(tn)
-        }
-        sensitivity = tp/(tp + fn)
-        specificity = tn/(tn + fp)
-        ret_dict["balanced_accuracy"] = (sensitivity + specificity)/2
     except:
-        ret_dict["balanced_accuracy"] = -1
+        tn, fp, fn, tp = get_confusion_matrix(target, predict)
+
+    ret_dict['confusion_matrix'] = {
+        'tp': int(tp), 'fn': int(fn),
+        'fp': int(fp), 'tn': int(tn)
+    }
+    sensitivity = tp/(tp + fn)
+    specificity = tn/(tn + fp)
+    ret_dict["balanced_accuracy"] = (sensitivity + specificity)/2
 
     ret_dict["target"] = target
     ret_dict["prediction"] = predict
