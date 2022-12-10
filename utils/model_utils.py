@@ -111,14 +111,15 @@ def get_prefix_tuning_edit(prefix_embeddings):
 
 
 ############################## Adapter Tuning Edit ##############################
-def get_adapter_tuning_edit(adapter_collection):
-    def insert_adapters_into_calculation(output, layer, adapter_collection = adapter_collection):
-        if(layer not in adapter_collection):
-            return output
-        # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
+# def get_adapter_tuning_edit(adapter_collection):
+#     def insert_adapters_into_calculation(output, layer, adapter_collection = adapter_collection):
+#         if(layer not in adapter_collection):
+#             return output
+#         # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
 
-        return adapter_collection[layer](output)
-    return insert_adapters_into_calculation
+#         return adapter_collection[layer](output)
+#     return insert_adapters_into_calculation
+from utils.tuning_utils import get_adapter_tuning_edit
 ############################## Adapter Tuning Edit ##############################
 
 

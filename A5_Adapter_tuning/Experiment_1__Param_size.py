@@ -62,8 +62,8 @@ adapter_choices = [16, 32, 64, 128, 256, 512, 1024]
 batch_size = 2
 ######################################################
 training_dataloader = DataLoader(training_dataset, batch_size=batch_size)
-# validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size)
-testing_dataloader = DataLoader(test_dataset, batch_size=1)
+validation_dataloader = DataLoader(validation_dataset, batch_size=1)
+# testing_dataloader = DataLoader(test_dataset, batch_size=1)
 
 
 MODEL_NAME = "gpt2-medium"
@@ -85,23 +85,26 @@ for adapter_dim in adapter_choices[::-1]:
         training_dataloader,
         mt,
         adapter_dim = adapter_dim,
-        num_epochs = 1
+        num_epochs = 1,
+        # limit = 100
     )
 
     os.makedirs(save_path, exist_ok = True)
     torch.save(adapter_blocks, f"{save_path}/adapter_dim__{adapter_dim}.pth")
 
     test_results = testing_utils.test(
-        testing_dataloader,
+        validation_dataloader,
         model, tokenizer,
         light_weight_tuning = adapter_blocks, algo = "adapter",
+        # limit = 100
     )
+    
+    # print(test_results)
+
     with open(f"{save_path}/logs_adapter_dim__{adapter_dim}.json", "w") as f:
         json.dump({
-            {
-                "tuninig_logs": tuning_logs,
-                "test_logs": test_results
-            }
+            "tuninig_logs": tuning_logs,
+            "test_logs": test_results
         }, f)
 
 

@@ -22,7 +22,8 @@ def get_tuned_adapters(
     learning_rate = 5e-4,
     warmup_steps = 200,
     weight_decay = 0,
-    max_token_per_comment = 963
+    max_token_per_comment = 963,
+    limit = -1
 ):
     if(type(mt) == str):
         MODEL_NAME = model
@@ -106,6 +107,10 @@ def get_tuned_adapters(
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            limit -= 1
+            if(limit == 0):
+                break
 
     ret_dict = {}
     ret_dict["training_loss_track"] = training_loss_track
