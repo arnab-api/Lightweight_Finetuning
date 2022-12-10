@@ -1,5 +1,6 @@
 import torch
 from torch.nn import Linear, ReLU, Sequential
+from utils import nethook
 
 ###################################### MISC ######################################
 def untuple(output):
@@ -80,3 +81,46 @@ def get_adapter_tuning_edit(adapter_collection): # to be used with the `nethook`
         return adapter_collection[layer](output)
     return insert_adapters_into_calculation
 ###################################### Adapter ######################################
+
+
+###################################### Prefix ######################################
+import random
+#######################################################
+
+init_words = ["sentiment", "elephant", "review"]
+#######################################################
+
+def get_initial_prefix(
+    model, tokenizer,
+    embedder = "transformer.wte",
+    prefix_size = 5
+):
+    words = random.choices(init_words, k=prefix_size)
+    sentence = " " + " ".join(words)
+    tokenized = tokenizer(sentence, return_tensors = "pt").to(next(model.parameters()).device)
+    embedder_module = nethook.get_module(model, embedder)
+    return embedder_module(tokenized['input_ids'])
+
+
+def get_prefix_tuning_edit(prefix_embeddings):
+    def insert_prompt_embeddings(output, layer, prefix_embeddings = prefix_embeddings):
+        if(layer not in prefix_embeddings):
+            return output
+        # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
+        # return output
+        X = untuple(output)
+        prefix_now = prefix_embeddings[layer]
+        prefix_size = prefix_now.shape[1]
+        arr = []
+        for batch in X:
+            added = torch.cat((prefix_now[0], batch[prefix_size:, :]))
+            arr.append(added)
+        X = torch.stack(arr)
+
+        if(type(output) is not tuple):
+            return X
+        else:
+            return (X, output[1])
+    return insert_prompt_embeddings
+###################################### Prefix ######################################
+

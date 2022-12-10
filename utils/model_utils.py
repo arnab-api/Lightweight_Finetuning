@@ -87,26 +87,27 @@ def get_shape(output):
     return pre + f"{output.shape}"
 
 ############################## Prefix Tuning Edit ##############################
-def get_prefix_tuning_edit(prefix_embeddings):
-    def insert_prompt_embeddings(output, layer, prefix_embeddings = prefix_embeddings):
-        if(layer not in prefix_embeddings):
-            return output
-        # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
-        # return output
-        X = untuple(output)
-        prefix_now = prefix_embeddings[layer]
-        prefix_size = prefix_now.shape[1]
-        arr = []
-        for batch in X:
-            added = torch.cat((prefix_now[0], batch[prefix_size:, :]))
-            arr.append(added)
-        X = torch.stack(arr)
+# def get_prefix_tuning_edit(prefix_embeddings):
+#     def insert_prompt_embeddings(output, layer, prefix_embeddings = prefix_embeddings):
+#         if(layer not in prefix_embeddings):
+#             return output
+#         # print("intervention ==> ", layer, "output shape ===> ", get_shape(output))
+#         # return output
+#         X = untuple(output)
+#         prefix_now = prefix_embeddings[layer]
+#         prefix_size = prefix_now.shape[1]
+#         arr = []
+#         for batch in X:
+#             added = torch.cat((prefix_now[0], batch[prefix_size:, :]))
+#             arr.append(added)
+#         X = torch.stack(arr)
 
-        if(type(output) is not tuple):
-            return X
-        else:
-            return (X, output[1])
-    return insert_prompt_embeddings
+#         if(type(output) is not tuple):
+#             return X
+#         else:
+#             return (X, output[1])
+#     return insert_prompt_embeddings
+from utils.tuning_utils import get_prefix_tuning_edit
 ############################## Prefix Tuning Edit ##############################
 
 
