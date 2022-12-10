@@ -10,13 +10,16 @@ def test(
     model, tokenizer,
     light_weight_tuning= None, algo = None,
     max_token_per_comment = 963,
-    limit = -1
+    limit = -1,
+    prefix_size = 0,
 ):
     if(light_weight_tuning is not None):
         assert (algo is not None), "Specify an intervention scheme {'adapter', 'prefix', 'prompt'}"
-
+    
+    print()
     print(f"testing .... ")
-
+    print()
+    
     target = []
     predict = []
 
@@ -39,7 +42,7 @@ def test(
                 model, tokenizer,
                 list(reviews),
                 argmax_greedy = True,
-                max_out_len= max_out_len + 3,
+                max_out_len= prefix_size + max_out_len + 3,
                 get_answer_tokens=True,
                 light_weight_tuning= light_weight_tuning, algo = algo
             )
@@ -51,16 +54,20 @@ def test(
         limit -= 1
         if(limit == 0):
             break
-
-    tn, fp, fn, tp = confusion_matrix(target, predict).ravel()
+    
     ret_dict = {}
-    ret_dict['confusion_matrix'] = {
-        'tp': int(tp), 'fn': int(fn),
-        'fp': int(fp), 'tn': int(tn)
-    }
-    sensitivity = tp/(tp + fn)
-    specificity = tn/(tn + fp)
-    ret_dict["balanced_accuracy"] = (sensitivity + specificity)/2
+    try:
+        tn, fp, fn, tp = confusion_matrix(target, predict).ravel()
+        ret_dict['confusion_matrix'] = {
+            'tp': int(tp), 'fn': int(fn),
+            'fp': int(fp), 'tn': int(tn)
+        }
+        sensitivity = tp/(tp + fn)
+        specificity = tn/(tn + fp)
+        ret_dict["balanced_accuracy"] = (sensitivity + specificity)/2
+    except:
+        ret_dict["balanced_accuracy"] = -1
+
     ret_dict["target"] = target
     ret_dict["prediction"] = predict
 

@@ -59,19 +59,20 @@ def print_formatted_results(prompts, txt, ret_dict):
         print()
         
 ############################## Prompt Tuning Edit ##############################
-def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
-    def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
-        if(layer != embedder):
-            return output
-        # print("intervention ==> ", layer, "output shape ===> ", output.shape)
-        # return output
-        prefix_size = soft_embeddings.shape[1]
-        arr = []
-        for batch in output:
-            added = torch.cat((soft_embeddings[0], batch[prefix_size:, :]))
-            arr.append(added)
-        return torch.stack(arr)
-    return insert_prompt_embeddings
+# def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
+#     def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
+#         if(layer != embedder):
+#             return output
+#         # print("intervention ==> ", layer, "output shape ===> ", output.shape)
+#         # return output
+#         prefix_size = soft_embeddings.shape[1]
+#         arr = []
+#         for batch in output:
+#             added = torch.cat((soft_embeddings[0], batch[prefix_size:, :]))
+#             arr.append(added)
+#         return torch.stack(arr)
+#     return insert_prompt_embeddings
+from utils.tuning_utils import get_prompt_tuning_edit
 ############################## Prompt Tuning Edit ##############################
 
 

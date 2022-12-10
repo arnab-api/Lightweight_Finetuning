@@ -123,3 +123,18 @@ def get_prefix_tuning_edit(prefix_embeddings):
     return insert_prompt_embeddings
 ###################################### Prefix ######################################
 
+###################################### Prompt ######################################
+def get_prompt_tuning_edit(soft_embeddings, embedder = "transformer.wte"):
+    def insert_prompt_embeddings(output, layer, soft_embeddings = soft_embeddings):
+        if(layer != embedder):
+            return output
+        # print("intervention ==> ", layer, "output shape ===> ", output.shape)
+        # return output
+        prefix_size = soft_embeddings.shape[1]
+        arr = []
+        for batch in output:
+            added = torch.cat((soft_embeddings[0], batch[prefix_size:, :]))
+            arr.append(added)
+        return torch.stack(arr)
+    return insert_prompt_embeddings
+###################################### Prompt ######################################

@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader, Dataset
 import re
 import pandas as pd
 import json
-import Prefix_Tuning
+import Prompt_Tuning
 
 import os
 import sys
@@ -13,6 +13,10 @@ from utils import model_utils
 from utils import tuning_utils
 from utils import testing_utils
 
+
+####################################################################
+torch.cuda.set_device(1)
+####################################################################
 
 print("#### Load and preprocess data")
 train_df = pd.read_csv("../Data/IMDB_50K_Reviews/train.csv")
@@ -74,7 +78,7 @@ print(f"Model {MODEL_NAME} initialized")
 print()
 
 ######################################################
-save_path = f"../Saved_weights/EXP1/Prefix-Tuning/{MODEL_NAME}"
+save_path = f"../Saved_weights/EXP1/Prompt-Tuning/{MODEL_NAME}"
 ######################################################
 
 
@@ -83,7 +87,7 @@ for prefix_size in prefix_size_choices:
     print("prefix size ==> ", prefix_size)
     print("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
 
-    prefix_embeddings, tuning_logs = Prefix_Tuning.get_tuned_prefixes(
+    soft_tokens, tuning_logs = Prompt_Tuning.get_tuned_soft_tokens(
         training_dataloader,
         mt,
         prefix_size = prefix_size,
@@ -92,19 +96,19 @@ for prefix_size in prefix_size_choices:
     )
 
     os.makedirs(save_path, exist_ok = True)
-    torch.save(prefix_embeddings, f"{save_path}/prefix_size__{prefix_size}.pth")
+    torch.save(soft_tokens, f"{save_path}/prompt_size__{prefix_size}.pth")
 
     test_results = testing_utils.test(
         validation_dataloader,
         model, tokenizer,
-        light_weight_tuning = prefix_embeddings, algo = "prefix", prefix_size = prefix_size,
+        light_weight_tuning = soft_tokens, algo = "prompt", prefix_size = prefix_size,
         # limit = 100
     )
     
     print(test_results['balanced_accuracy'])
     # print(test_results)
 
-    with open(f"{save_path}/logs_prefix_size__{prefix_size}.json", "w") as f:
+    with open(f"{save_path}/logs_prompt_size__{prefix_size}.json", "w") as f:
         json.dump({
             "tuninig_logs": tuning_logs,
             "test_logs": test_results

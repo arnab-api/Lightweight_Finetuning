@@ -8,10 +8,10 @@ import sys
 sys.path.append('..')
 from utils import nethook
 from utils import model_utils
-from utils.tuning_utils import get_initial_prefix, get_prefix_tuning_edit
+from utils.tuning_utils import get_initial_prefix, get_prompt_tuning_edit
 
 
-def get_tuned_prefixes(
+def get_tuned_soft_tokens(
     training_dataloader, # torch.Dataloader
     mt = "gpt2-medium",
     ## adapter specific params
@@ -37,24 +37,17 @@ def get_tuned_prefixes(
     else:
         model, tokenizer = mt.model, mt.tokenizer
 
-    transformer_blocks = [f"transformer.h.{n}" for n in range(model.config.n_layer)]
-    prefix_embeddings = {
-        key: get_initial_prefix(
-            model, tokenizer, 
-            prefix_size = prefix_size
-        ) for key in [embedder] + transformer_blocks[:-1]
-    }
-    insert_prefix_embeddings = get_prefix_tuning_edit(prefix_embeddings)
-    print(f"Initializing prefixes, n = {prefix_size}")
+    soft_embeddings = get_initial_prefix(model, tokenizer, prefix_size = prefix_size)
+    insert_prefix_embeddings = get_prompt_tuning_edit(soft_embeddings)
+    print(f"Initializing soft tokens, n={prefix_size}")
 
     for name, w in model.named_parameters():
         w.requires_grad = False
 
-    for k in prefix_embeddings:
-        prefix_embeddings[k].requires_grad = True
+    soft_embeddings.requires_grad  = True
 
     optimizer = torch.optim.Adam(
-        [prefix_embeddings[k] for k in prefix_embeddings],
+        [soft_embeddings],
         lr=learning_rate,
         weight_decay=weight_decay,
     )
@@ -95,7 +88,7 @@ def get_tuned_prefixes(
             # tokenized["input_ids"].require_grad = True
             with nethook.TraceDict(
                 model,
-                list(prefix_embeddings.keys()),
+                [embedder],
                 edit_output=insert_prefix_embeddings
             ) as traces:
                 outputs = model(
@@ -122,4 +115,4 @@ def get_tuned_prefixes(
 
     ret_dict = {}
     ret_dict["training_loss_track"] = training_loss_track
-    return prefix_embeddings, ret_dict
+    return soft_embeddings, ret_dict
