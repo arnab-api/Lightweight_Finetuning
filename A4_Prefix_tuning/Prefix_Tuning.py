@@ -28,7 +28,7 @@ def get_tuned_prefixes(
     embedder = "transformer.wte",
 ):
     if(type(mt) == str):
-        MODEL_NAME = model
+        MODEL_NAME = mt
         mt = model_utils.ModelAndTokenizer(MODEL_NAME, low_cpu_mem_usage=False)
         model = mt.model
         tokenizer = mt.tokenizer
