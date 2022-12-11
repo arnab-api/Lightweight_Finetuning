@@ -5,12 +5,15 @@ from utils import model_utils
 from sklearn.metrics import confusion_matrix
 
 def get_confusion_matrix(target, prediction, choices = [" positive", " negative"]):
+    _predict = []
     for i in range(len(prediction)):
         if(prediction[i] not in choices):
             for wrong in choices:
                 if(wrong != target[i]):
-                    prediction[i] = wrong
-    tn, fp, fn, tp = confusion_matrix(target, prediction).ravel()
+                    _predict.append(wrong)
+        else:
+            _predict.append(prediction[i])
+    tn, fp, fn, tp = confusion_matrix(target, _predict).ravel()
     return tn, fp, fn, tp
 
 def test(

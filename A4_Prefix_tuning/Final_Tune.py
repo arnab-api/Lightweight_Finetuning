@@ -75,7 +75,7 @@ print()
 
 
 print("prefix size ==> ", prefix_size)
-prefix_embeddings, tuning_logs = Prefix_Tuning.get_tuned_adapters(
+prefix_embeddings, tuning_logs = Prefix_Tuning.get_tuned_prefixes(
     training_dataloader,
     mt,
     prefix_size = prefix_size,
@@ -90,6 +90,7 @@ test_results = testing_utils.test(
     testing_dataloader,
     model, tokenizer,
     light_weight_tuning = prefix_embeddings, algo = "prefix",
+    prefix_size = prefix_size
     # limit = 10
 )
     

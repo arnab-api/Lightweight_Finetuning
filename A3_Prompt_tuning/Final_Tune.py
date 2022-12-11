@@ -13,6 +13,7 @@ from utils import model_utils
 from utils import tuning_utils
 from utils import testing_utils
 
+torch.cuda.set_device(1)
 
 print("#### Load and preprocess data")
 train_df = pd.read_csv("../Data/IMDB_50K_Reviews/train.csv")
@@ -59,7 +60,7 @@ print()
 MODEL_NAME = "gpt2-medium"
 prompt_size = 8
 batch_size = 2
-save_path = f"../Saved_weights/Final/Adapters/{MODEL_NAME}"
+save_path = f"../Saved_weights/Final/Prompt_Tuning/{MODEL_NAME}"
 ######################################################
 
 
@@ -75,7 +76,7 @@ print()
 
 
 print("prompt size ==> ", prompt_size)
-adapter_blocks, tuning_logs = Prompt_Tuning.get_tuned_adapters(
+soft_prompts, tuning_logs = Prompt_Tuning.get_tuned_soft_tokens(
     training_dataloader,
     mt,
     prefix_size = prompt_size,
@@ -84,12 +85,13 @@ adapter_blocks, tuning_logs = Prompt_Tuning.get_tuned_adapters(
 )
 
 os.makedirs(save_path, exist_ok = True)
-torch.save(adapter_blocks, f"{save_path}/prompt_size__{prompt_size}.pth")
+torch.save(soft_prompts, f"{save_path}/prompt_size__{prompt_size}.pth")
 
 test_results = testing_utils.test(
     testing_dataloader,
     model, tokenizer,
-    light_weight_tuning = adapter_blocks, algo = "adapter",
+    light_weight_tuning = soft_prompts, algo = "prompt",
+    prefix_size = prompt_size
     # limit = 10
 )
     
