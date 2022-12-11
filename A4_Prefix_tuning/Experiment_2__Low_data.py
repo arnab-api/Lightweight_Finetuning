@@ -13,6 +13,7 @@ from utils import model_utils
 from utils import tuning_utils
 from utils import testing_utils
 
+torch.cuda.set_device(1)
 
 print("#### Load and preprocess data")
 train_df = pd.read_csv("../Data/IMDB_50K_Reviews/train.csv")
@@ -57,7 +58,7 @@ print()
 
 ######################################################
 dataset_sizes = [100, 500, 1000, 5000, 10000, 20000]
-prefix_size = 8
+prefix_size = 2
 batch_size = 2
 save_path = f"../Saved_weights/EXP2/Prefix_Tuning/{MODEL_NAME}"
 ######################################################
@@ -73,7 +74,7 @@ for train_size in dataset_sizes:
     training_dataloader = DataLoader(training_dataset, batch_size=batch_size)
 
     print("prefix size ==> ", prefix_size)
-    prefix_embeddings, tuning_logs = Prefix_Tuning.get_tuned_soft_tokens(
+    prefix_embeddings, tuning_logs = Prefix_Tuning.get_tuned_prefixes(
         training_dataloader,
         mt,
         prefix_size = prefix_size,
