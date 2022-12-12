@@ -16,7 +16,8 @@ from utils import testing_utils
 
 print("#### Load and preprocess data")
 train_df = pd.read_csv("../Data/IMDB_50K_Reviews/train.csv")
-# validation_df = pd.read_csv("../Data/IMDB_50K_Reviews/validation.csv")
+validation_df = pd.read_csv("../Data/IMDB_50K_Reviews/validation.csv")
+train_df = pd.concat([train_df, validation_df])
 test_df = pd.read_csv("../Data/IMDB_50K_Reviews/test.csv")
 
 CLEANR = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});|/.*/')
@@ -49,9 +50,10 @@ class GoEmotions(Dataset):
 
 MODEL_NAME = "gpt2-medium"
 ######################################################
-dataset_sizes = [100, 500, 1000, 5000, 10000, 20000]
+# dataset_sizes = [100, 500, 1000, 5000, 10000, 20000]
+dataset_sizes = [40000]
 batch_size = 2
-save_path = f"../Saved_weights/EXP2/Finetune/{MODEL_NAME}"
+save_path = f"../Saved_weights/Final/Finetune/{MODEL_NAME}"
 ######################################################
 
 test_dataset = GoEmotions(test_df)
@@ -67,7 +69,7 @@ for train_size in dataset_sizes:
     model, tokenizer, tuning_logs = Full_Finetuning.get_tuned_model(
         training_dataloader,
         MODEL_NAME,
-        num_epochs = 1,
+        num_epochs = 5,
         # limit = 10
     )
 
