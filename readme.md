@@ -11,5 +11,15 @@ This work investigates three prominent ***light-weight*** finetuning concepts.
 
 The issue is that all the three works mentioned above works with different language models and evaluate on different tasks. The goal of this project is to implement all these three approaches on a single model for a single task and compare their efficacy.
 
+# Instructions
+
+Check the `Demo.ipynb` file for a quick demonstration of how 
+all the tuning approaches perform in a binary sentiment
+classification task.
+
+Duplicate the `conda` environment using the following command.
+
+`conda env create -f conda_environment.yml`
 
 ## <span style="color:red">Tuned Weights: [GDrive](https://drive.google.com/drive/folders/1kagxDJzKhS6UbKesbf7_SXFJyf1K-ITK?usp=sharing)</span>
+Download the tuned weights and save them in the `Saved_weights` folder.
